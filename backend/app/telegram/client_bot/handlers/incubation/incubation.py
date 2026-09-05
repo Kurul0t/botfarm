@@ -84,52 +84,78 @@ def create_incubation_router() -> Router:
         )
             
             
-    @router.callback_query(StartIncubation.choose_instruction,  F.data.startswith("instruction_id:"))
-    async def choose_instruction(callback: CallbackQuery, state: FSMContext, bot: Bot,) -> None:
+    @router.callback_query(StartIncubation.choose_instruction, F.data.startswith("instruction_id:"))
+    async def choose_instruction(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
         instruction_id = int(callback.data.split(":")[1])
         instruction_title = str(callback.data.split(":")[2])
         
-
         data = await state.get_data()
         number_of_incubator = data.get("number")
         eggs_amount = data.get("eggs_amount")
         user_id = callback.from_user.id
         bot_id = bot.id
-        script = await app_state.instruction_service.get_script(id = instruction_id)
-        rem_list=[]
+        
+        script = await app_state.instruction_service.get_script(id=instruction_id)
+        rem_list = []
+        
         if not script:
             print("База даних повернула порожній список.")
+            return
+            
         script = script.strip('"')
         try:
             dictionary_format = "{" + script + "}"
             instruction_dict = ast.literal_eval(dictionary_format)
-            print("Успішно конвертовано у словник:", instruction_dict)
         except Exception as e:
             print(f"Помилка конвертації рядка у словник: {e}")
+            await callback.message.answer("❌ Помилка обробки інструкції.")
             return
+            
         for key, value in instruction_dict.items():
-            rem_list.append((key, user_id, bot_id, value,number_of_incubator))
-        print(rem_list)
+            rem_list.append((key, user_id, bot_id, value, number_of_incubator))
         
+        # 1. Записуємо нагадування в БД та запускаємо менеджер
         reminder_list = await pererobka(rem_list)
-        for reminder in (reminder_list):
+        for reminder in reminder_list:
             await app_state.reminder_manager.add_reminder(reminder)
         await app_state.reminder_manager.restart()
         
-        sheet = await app_state.google_sheet_service.write(bot_id)
+        # 2. Оновлюємо стан інкубатора в БД
+        await app_state.incubator_service.update_state(bot_id=bot_id, number=number_of_incubator)
         
-        today_str = datetime.now().strftime("%d.%m.%Y")
-        for index, worksheet in enumerate(sheet.worksheets()):
-            if worksheet.title == "Інкубування":
-                
-                worksheet = sheet.get_worksheet(index)
-                worksheet.append_row([number_of_incubator,"Етап 1",today_str, None,None,eggs_amount ])
+        # 3. МИТТЄВО НАДСИЛАЄМО ВІДПОВІДЬ КОРИСТУВАЧУ (щоб бот не зависать)
+        plus_17 = (datetime.now() + timedelta(days=17)).strftime("%d.%m.%Y")
+        await callback.message.answer(
+            f"✅ Інкубатор №{number_of_incubator} запущено успішно\n\n"
+            f"Інструкція: \"{instruction_title}\"\n"
+            f"Яєць закладено: {eggs_amount}\n"
+            f"Орієнтовна дата вилупу: {plus_17}"
+        )
+        await callback.answer() # Прибираємо годинничок на кнопці
+        await state.clear()     # Скидаємо FSM стан
         
-        plus_17 = (datetime.now() + timedelta(days = 17)).strftime("%d.%m.%Y")
-        
-        await callback.message.answer(f"""✅ Інкубатор №{number_of_incubator} запущено успішно\n\nІнструкція "{instruction_title}"\nЯєць закладено: {eggs_amount}\nОрієнтовна дата вилупу: {plus_17}""")
-        await app_state.incubator_service.update_state(bot_id=bot_id,number = number_of_incubator )
-        await callback.answer()
+        # 4. БЕЗПЕЧНИЙ ЗАПИС В GOOGLE SHEETS (Якщо впаде тут — повідомлення користувач все одно отримає)
+        try:
+            sheet = await app_state.google_sheet_service.write(bot_id)
+            today_str = datetime.now().strftime("%d.%m.%Y")
+            
+            for index, worksheet in enumerate(sheet.worksheets()):
+                if worksheet.title == "Інкубування":
+                    target_worksheet = sheet.get_worksheet(index)
+                    
+                    # ЗАМІСТЬ None ПЕРЕДАЄМО ПОРОЖНІ РЯДКИ ""
+                    target_worksheet.append_row([
+                        number_of_incubator, 
+                        "Етап 1", 
+                        today_str, 
+                        "", 
+                        "", 
+                        eggs_amount
+                    ])
+                    break # Зупиняємо цикл, бо лист уже знайдено
+        except Exception as sheet_error:
+            print(f"🚨 Помилка при записі в Google Sheets: {sheet_error}")
+
         
     
     return router
