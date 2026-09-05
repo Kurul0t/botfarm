@@ -1,0 +1,7 @@
+python-dotenv
+sqlalchemy
+asyncpg 
+alembic
+psycopg
+gspread
+oauth2client
