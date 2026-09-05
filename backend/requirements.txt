@@ -5,3 +5,4 @@ alembic
 psycopg
 gspread
 oauth2client
+aiogram
