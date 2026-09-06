@@ -42,7 +42,10 @@ class ReminderManager:
         try:
             while heap:
                     target=heap[0][0]
-                    now = datetime.now(target.tzinfo)
+                    if target.tzinfo is None:
+                        target = target.replace(tzinfo=UA_TZ)
+                    
+                    now = datetime.now(UA_TZ)
                     sleep_time = max(0, (target - now).total_seconds())
                     await asyncio.sleep(sleep_time)
                     while heap and heap[0][0] <= datetime.now(UA_TZ):
