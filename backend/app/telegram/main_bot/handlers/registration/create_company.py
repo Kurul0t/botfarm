@@ -75,7 +75,7 @@ async def receive_bot_token(
     await state.set_state(CompanyRegistration.admin_login)
 
     await message.answer(
-        "Придумайте адміністративний логін для керування ботом:"
+        "Придумайте адміністративний ЛОГІН для керування ботом:"
     )
 
 
@@ -96,7 +96,7 @@ async def receive_admin_login(
     await state.set_state(CompanyRegistration.admin_password)
 
     await message.answer(
-        "Придумайте адміністративний пароль"
+        "Придумайте адміністративний ПАРОЛЬ"
     )
 
 
@@ -157,25 +157,33 @@ async def confirm_registration(
     me = await bot.get_me()
 
     print("Заявка на реєстрацію:", data)
-    company = await app_state.company_service.create_company(
-        name=data["company_name"],
-        company_login=data["admin_login"],
-        owner_password_hash=data["admin_password"],
-        user_id=user_id,
-        bot_token=bot_token,
-        tg_bot_id=me.id,
-        
-    )
-
-    await state.clear()
-    await app_state.bot_manager.create_bot(bot_token)
-
-    if callback.message:
-        await callback.message.edit_text(
-            "✅ Заявку на реєстрацію надіслано адміністратору. Очікуйте підтвердження та подальшої інструкції"
+    try:
+        company = await app_state.company_service.create_company(
+            name=data["company_name"],
+            company_login=data["admin_login"],
+            owner_password_hash=data["admin_password"],
+            user_id=user_id,
+            bot_token=bot_token,
+            tg_bot_id=me.id,
+            
         )
 
-    await callback.answer()
+        await state.clear()
+        await app_state.bot_manager.create_bot(bot_token)
+
+        if callback.message:
+            await callback.message.edit_text(
+                "✅ Заявку на реєстрацію надіслано адміністратору. Очікуйте підтвердження та подальшої інструкції"
+            )
+
+        await callback.answer()
+    except Exception as e:
+        print("Помилка при створенні компанії:", e)
+        if callback.message:
+            await callback.message.edit_text(
+                "❌ Сталася помилка при створенні компанії. Будь ласка, спробуйте ще раз пізніше."
+            )
+        await callback.answer()
     
 
 

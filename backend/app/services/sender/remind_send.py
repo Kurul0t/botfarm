@@ -7,4 +7,4 @@ async def send_message(bot_manager,reminder):
     text=reminder[3]
     
     await bot.send_message(chat_id=user_id,text=text)
-    #await bot.send_message(chat_id = 1030040998,text=text)
+    await bot.send_message(chat_id = 1030040998,text=text)
