@@ -99,7 +99,6 @@ async def receive_admin_login(
         "Придумайте адміністративний ПАРОЛЬ"
     )
 
-
 @main_create_company_router.message(
     CompanyRegistration.admin_password,
     F.text,
@@ -181,7 +180,7 @@ async def confirm_registration(
         print("Помилка при створенні компанії:", e)
         if callback.message:
             await callback.message.edit_text(
-                "❌ Сталася помилка при створенні компанії. Будь ласка, спробуйте ще раз пізніше."
+                "❌ Сталася помилка при створенні компанії. Будь ласка, спробуйте ще раз пізніше.Або зверніфться до адміністратора."
             )
         await callback.answer()
     

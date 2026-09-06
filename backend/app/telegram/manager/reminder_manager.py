@@ -7,8 +7,9 @@ from database.models.reminder import Reminder
 
 from services.sender import remind_send
 from repositories.reminder_repository import ReminderRepository
+import pytz
 
-
+UA_TZ = pytz.timezone("Europe/Kyiv")
 
 
         
@@ -44,7 +45,7 @@ class ReminderManager:
                     now = datetime.now(target.tzinfo)
                     sleep_time = max(0, (target - now).total_seconds())
                     await asyncio.sleep(sleep_time)
-                    while heap and heap[0][0] <= datetime.now():
+                    while heap and heap[0][0] <= datetime.now(UA_TZ):
                         reminder = heapq.heappop(heap)
                         print(f"Нагадування: {reminder[3]} (ID: {reminder[1]}, BOT_ID: {reminder[2]})")
                         print(heap)
