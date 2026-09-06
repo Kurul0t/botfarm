@@ -7,11 +7,12 @@ from database.models.reminder import Reminder
 
 from services.sender import remind_send
 from repositories.reminder_repository import ReminderRepository
-import pytz
+from zoneinfo import ZoneInfo
+import logging
+UA_TZ = ZoneInfo("Europe/Kyiv")
 
-UA_TZ = pytz.timezone("Europe/Kyiv")
-
-
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
         
 class ReminderManager:
     def __init__(self, bot_manager):
@@ -46,14 +47,28 @@ class ReminderManager:
                         target = target.replace(tzinfo=UA_TZ)
                     
                     now = datetime.now(UA_TZ)
+                    logger.info(f"now: {now}, target: {target}, heap: {heap}")
                     sleep_time = max(0, (target - now).total_seconds())
                     await asyncio.sleep(sleep_time)
-                    while heap and heap[0][0] <= datetime.now(UA_TZ):
-                        reminder = heapq.heappop(heap)
-                        print(f"Нагадування: {reminder[3]} (ID: {reminder[1]}, BOT_ID: {reminder[2]})")
-                        print(heap)
+                    
+                    now = datetime.now(UA_TZ)
+            
+                    # 4. Вигрібаємо з купи ВСІ нагадування, час яких НАСТАВ
+                    while heap:
+                        reminder_time = heap[0][0]
+                        if reminder_time.tzinfo is None:
+                            reminder_time = reminder_time.replace(tzinfo=UA_TZ)
                         
-                        await remind_send.send_message(self.bot_manager,reminder)
+                        # Тепер порівнюємо Київський час із Київським часом
+                        if reminder_time <= now:
+                            reminder = heapq.heappop(heap)
+                            logger.info(f"Нагадування: {reminder[3]} (ID: {reminder[1]}, BOT_ID: {reminder[2]})")
+                            
+                            # Надсилаємо в бот
+                            await remind_send.send_message(self.bot_manager, reminder)
+                        else:
+                            # Якщо найближче нагадування ще в майбутньому — виходимо з внутрішнього циклу
+                            break
             
         except asyncio.CancelledError:
             print("Зупинка нагадувальника")
@@ -68,6 +83,7 @@ class ReminderManager:
             user_id=reminder[1],
             bot_id=reminder[2],
             text=reminder[3],
+            command = reminder[4],
         )
 
         async with SessionLocal() as session:
@@ -84,6 +100,7 @@ class ReminderManager:
                 reminder.user_id,
                 reminder.bot_id,
                 reminder.text,
+                reminder.command,
             ),
         )
     async def get_all_reminders(self):
@@ -102,6 +119,7 @@ class ReminderManager:
                             reminder.user_id,
                             reminder.bot_id,
                             reminder.text,
+                            reminder.command,
                         )
                     )
                 else:

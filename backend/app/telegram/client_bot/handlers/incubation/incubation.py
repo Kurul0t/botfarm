@@ -12,6 +12,13 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from .states import StartIncubation
 
+import logging
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
 
 def create_incubation_router() -> Router:
     router = Router()
@@ -121,7 +128,7 @@ def create_incubation_router() -> Router:
         await app_state.reminder_manager.restart()
         
         # 2. Оновлюємо стан інкубатора в БД
-        await app_state.incubator_service.update_state(bot_id=bot_id, number=number_of_incubator)
+        await app_state.incubator_service.update_state(bot_id=bot_id, number=number_of_incubator,val = "INCUBATING")
         
         # 3. МИТТЄВО НАДСИЛАЄМО ВІДПОВІДЬ КОРИСТУВАЧУ (щоб бот не зависать)
         plus_17 = (datetime.now() + timedelta(days=17)).strftime("%d.%m.%Y")
@@ -135,26 +142,29 @@ def create_incubation_router() -> Router:
         await state.clear()     # Скидаємо FSM стан
         
         # 4. БЕЗПЕЧНИЙ ЗАПИС В GOOGLE SHEETS (Якщо впаде тут — повідомлення користувач все одно отримає)
-        try:
-            sheet = await app_state.google_sheet_service.write(bot_id)
-            today_str = datetime.now().strftime("%d.%m.%Y")
-            
-            for index, worksheet in enumerate(sheet.worksheets()):
-                if worksheet.title == "Інкубування":
-                    target_worksheet = sheet.get_worksheet(index)
-                    
-                    # ЗАМІСТЬ None ПЕРЕДАЄМО ПОРОЖНІ РЯДКИ ""
-                    target_worksheet.append_row([
-                        number_of_incubator, 
-                        "Етап 1", 
-                        today_str, 
-                        "", 
-                        "", 
-                        eggs_amount
-                    ])
-                    break # Зупиняємо цикл, бо лист уже знайдено
-        except Exception as sheet_error:
-            print(f"🚨 Помилка при записі в Google Sheets: {sheet_error}")
+        
+        sheet = await app_state.google_sheet_service.write(bot_id)
+        today_str = datetime.now().strftime("%d.%m.%Y")
+        print(f"АРКУШІ: {sheet.worksheets()}")
+        
+        for index, worksheet in enumerate(sheet.worksheets()):
+            print(f"АРКУШ: {worksheet.title}")
+            if worksheet.title == "Інкубування":
+                target_worksheet = sheet.get_worksheet(index)
+                
+                # ЗАМІСТЬ None ПЕРЕДАЄМО ПОРОЖНІ РЯДКИ ""
+                target_worksheet.append_row([
+                    number_of_incubator, 
+                    "Етап 1", 
+                    today_str, 
+                    "", 
+                    "", 
+                    eggs_amount
+                ])
+                break # Зупиняємо цикл, бо лист уже знайдено
+            else:
+                logger.info(f"АРКУШУ НЕ ЗНАЙДЕНО")
+        
 
         
     

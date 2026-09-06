@@ -35,6 +35,7 @@ class IncubatorService:
         self,
         bot_id:int,
         number:int,
+        val:str
     ):
         async with SessionLocal() as session:
             company_id  = await self.bot_repository.get_company_by_bot(
@@ -48,5 +49,6 @@ class IncubatorService:
             await self.incubator_repository.change_state(
                 session=session,
                 company_id=company_id, 
-                number = number
+                number = number,
+                value_ = val,
             )

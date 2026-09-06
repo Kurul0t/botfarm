@@ -16,7 +16,9 @@ class IncubatorRepository:
         session:AsyncSession,
         company_id:int,
         number:int,
+        value_:str,
     ):
-        await session.execute(update(Incubator).where(Incubator.company_id == company_id,Incubator.number == number).values(state=IncubatorState.INCUBATING.value))
+        target_state = IncubatorState[value_].value
+        await session.execute(update(Incubator).where(Incubator.company_id == company_id,Incubator.number == number).values(state=target_state))
         
         await session.commit()
