@@ -8,10 +8,11 @@ from database.models.reminder import Reminder
 from services.sender import remind_send
 from repositories.reminder_repository import ReminderRepository
 import pytz
-
+import logging
 UA_TZ = pytz.timezone("Europe/Kyiv")
 
-
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
         
 class ReminderManager:
     def __init__(self, bot_manager):
@@ -46,12 +47,12 @@ class ReminderManager:
                         target = target.replace(tzinfo=UA_TZ)
                     
                     now = datetime.now(UA_TZ)
+                    logger.info(f"now: {now}, target: {target}, heap: {heap}")
                     sleep_time = max(0, (target - now).total_seconds())
                     await asyncio.sleep(sleep_time)
                     while heap and heap[0][0] <= datetime.now(UA_TZ):
                         reminder = heapq.heappop(heap)
-                        print(f"Нагадування: {reminder[3]} (ID: {reminder[1]}, BOT_ID: {reminder[2]})")
-                        print(heap)
+                        logger.info(f"Нагадування: {reminder[3]} (ID: {reminder[1]}, BOT_ID: {reminder[2]})")
                         
                         await remind_send.send_message(self.bot_manager,reminder)
             
