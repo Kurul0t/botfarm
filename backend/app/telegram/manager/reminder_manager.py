@@ -51,11 +51,24 @@ class ReminderManager:
                     sleep_time = max(0, (target - now).total_seconds())
                     await asyncio.sleep(sleep_time)
                     
-                    while heap and heap[0][0] <= datetime.now(UA_TZ):
-                        reminder = heapq.heappop(heap)
-                        logger.info(f"Нагадування: {reminder[3]} (ID: {reminder[1]}, BOT_ID: {reminder[2]})")
+                    now = datetime.now(UA_TZ)
+            
+                    # 4. Вигрібаємо з купи ВСІ нагадування, час яких НАСТАВ
+                    while heap:
+                        reminder_time = heap[0][0]
+                        if reminder_time.tzinfo is None:
+                            reminder_time = reminder_time.replace(tzinfo=UA_TZ)
                         
-                        await remind_send.send_message(self.bot_manager,reminder)
+                        # Тепер порівнюємо Київський час із Київським часом
+                        if reminder_time <= now:
+                            reminder = heapq.heappop(heap)
+                            logger.info(f"Нагадування: {reminder[3]} (ID: {reminder[1]}, BOT_ID: {reminder[2]})")
+                            
+                            # Надсилаємо в бот
+                            await remind_send.send_message(self.bot_manager, reminder)
+                        else:
+                            # Якщо найближче нагадування ще в майбутньому — виходимо з внутрішнього циклу
+                            break
             
         except asyncio.CancelledError:
             print("Зупинка нагадувальника")
