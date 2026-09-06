@@ -43,8 +43,7 @@ class ReminderManager:
         try:
             while heap:
                     target=heap[0][0]
-                    if target.tzinfo is None:
-                        target = target.replace(tzinfo=UA_TZ)
+                    
                     
                     now = datetime.now(UA_TZ)
                     logger.info(f"now: {now}, target: {target}, heap: {heap}")
