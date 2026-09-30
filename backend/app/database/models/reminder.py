@@ -13,3 +13,4 @@ class Reminder(Base):
     user_id: Mapped[int]=mapped_column(BigInteger,nullable=False,)
     bot_id: Mapped[int] = mapped_column(BigInteger,nullable=False,)
     text: Mapped[str] = mapped_column(Text,nullable=False,) 
+    command:Mapped[list[str]]=mapped_column(Text,nullable=True,)
