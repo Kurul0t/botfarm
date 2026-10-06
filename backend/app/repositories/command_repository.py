@@ -11,3 +11,12 @@ class CommandRepository:
     ):
         result = await session.execute(select(Command.function_name, Command.arguments).where(Command.id == command_id))
         return result.fetchone()
+    async def create_command(
+        self,
+        session: AsyncSession,
+        command: Command,
+    )-> Command:
+        session.add(command)
+        await session.commit()
+        await session.refresh(command)
+        return command.id

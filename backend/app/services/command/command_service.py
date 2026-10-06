@@ -2,6 +2,7 @@
 
 
 
+from database.models.command import Command
 from database.session import SessionLocal
 from repositories.command_repository import CommandRepository
 
@@ -25,3 +26,21 @@ class CommandService:
                 return path, arguments
             
             return None, {}
+    async def create_command(
+        self,
+        function_name:str,
+        arguments:dict,
+        counter:int,
+    ):
+        async with SessionLocal() as session:
+            command = Command(
+                function_name = function_name,
+                arguments = arguments,
+                counter = counter
+            )
+            
+            id_ = await self.command_repository.create_command(
+                session = session,
+                command = command,
+                )
+            return id_
