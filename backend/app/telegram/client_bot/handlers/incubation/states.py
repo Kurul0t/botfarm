@@ -6,3 +6,9 @@ class StartIncubation(StatesGroup):
     choose_incubator = State()
     number = State()
     confirmation = State()
+    
+class CheckIncubation(StatesGroup):
+    number = State()
+    unavailable_incubators = State()
+    company_id = State()
+    eggs_amount = State()

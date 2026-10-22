@@ -11,6 +11,24 @@ class IncubatorRepository:
     ) -> list[Incubator]:
         result = await session.execute(select(Incubator).where(and_(Incubator.company_id == company_id, Incubator.state == IncubatorState.AVAILABLE,)))
         return result.scalars().all()
+     
+    async def get_all_unavailable(
+        self,
+        session = AsyncSession,
+        company_id = int,
+    ) -> list[Incubator]:    
+        result = await session.execute(select(Incubator).where(and_(Incubator.company_id==company_id,Incubator.state ==IncubatorState.INCUBATING)))
+        return result.scalars().all()
+    
+    async def get_instruction_id(
+        self,
+        session:AsyncSession,
+        company_id:int,
+        number: int,
+    ):
+        result = await session.execute(select(Incubator.instruction_id).where(and_(Incubator.company_id == company_id, Incubator.number == number)))
+        return result.scalar()
+
     async def change_state(
         self,
         session:AsyncSession,

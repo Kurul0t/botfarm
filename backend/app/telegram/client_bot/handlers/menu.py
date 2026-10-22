@@ -8,4 +8,4 @@ client_menu_router = Router()
 
 @client_menu_router.message(Command("menu"))
 async def menu_handler(message: Message):
-    await message.answer("Меню клієнтського бота: \n/start_incubation")
+    await message.answer("Меню клієнтського бота: \n\nЗапуск інкубатора -- /start_incubation\nАктивні інкубатори -- /check_incubation") 

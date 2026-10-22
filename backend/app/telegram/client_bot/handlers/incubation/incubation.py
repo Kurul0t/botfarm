@@ -6,11 +6,15 @@ from core import app_state
 import ast
 from services.reminder.reminder_service import pererobka
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
+UA_TZ = ZoneInfo("Europe/Kyiv")
 
-from .states import StartIncubation
+from .states import CheckIncubation, StartIncubation
 
 import logging
 
@@ -23,7 +27,46 @@ logger = logging.getLogger(__name__)
 def create_incubation_router() -> Router:
     router = Router()
 
-    
+    @router.message(Command("check_incubation"))
+    async def  check_incubation(message: Message,bot:Bot,state:FSMContext)-> None:
+        bot_id=bot.id
+        company_id, incubators = await app_state.incubator_service.get_unavailable_incubators(bot_id=bot_id)
+        text="⚙️Активні інкубатори⚙️\n\n"
+        incubators_ = set()
+        
+        for incubator in incubators:
+
+            count_days = (datetime.now(tz=UA_TZ) - incubator.activated_at).days
+            
+            text += f"Інкубатор №{incubator.number} [{incubator.eggs_amount}шт] -- {count_days} день\n"
+            incubators_.add(incubator.number)
+
+        await message.answer(text)
+        await message.answer("Для детальної інформації про \nінкубацію, введіть НОМЕР інкубатора")
+        
+        await state.update_data(unavailable_incubators=incubators_)
+        await state.update_data(company_id=company_id)
+        await state.set_state(CheckIncubation.number)
+        
+    @router.message(CheckIncubation.number, F.text)
+    async def check_incubation_number(message:Message, state: FSMContext)-> None:
+        number = message.text.strip()
+        data = await state.get_data()
+        incubators = data.get("unavailable_incubators", set())
+        company_id = data.get("company_id")
+        
+        if number.isdigit() and int(number) in incubators:
+            
+            instruction = await app_state.incubator_service.get_info_of_incubation(
+                company_id=company_id,
+                number=int(number)
+            )
+
+            await state.clear()
+        else:
+            await message.answer("❌ Номер інкубатора не коректний")         
+
+
 
     @router.message(Command("start_incubation"))
     async def start_incubation(message:Message, state:FSMContext) -> None:
@@ -148,7 +191,7 @@ def create_incubation_router() -> Router:
         print(f"АРКУШІ: {sheet.worksheets()}")
         
         for index, worksheet in enumerate(sheet.worksheets()):
-            print(f"АРКУШ: {worksheet.title}")
+            print(f"АРКУШ: {worksheet.title} ---- {index}")
             if worksheet.title == "Інкубування":
                 target_worksheet = sheet.get_worksheet(index)
                 

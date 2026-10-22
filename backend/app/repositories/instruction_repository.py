@@ -22,3 +22,11 @@ class InstructionRepository:
         result = await session.execute(select(Instruction.script).where(Instruction.id == id))
         
         return result.scalar_one_or_none()
+    async def get_instruction_by_id(
+            self,
+            session:AsyncSession,
+            id:int,
+        ):
+            result = await session.execute(select(Instruction).where(Instruction.id == id))
+            
+            return result.scalar_one_or_none()

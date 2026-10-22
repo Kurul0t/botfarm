@@ -39,6 +39,10 @@ class Incubator(Base):
         default=IncubatorState.AVAILABLE.value,
 
     )
+    instruction_id: Mapped[int | None] = mapped_column(
+        ForeignKey("instructions.id"),
+        nullable=True,
+    )
     
 class Instruction(Base):
     __tablename__ = "instructions"

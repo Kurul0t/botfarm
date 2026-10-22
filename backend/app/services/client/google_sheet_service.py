@@ -11,10 +11,17 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
-creds_path = os.environ.get(
+local_creds = os.environ.get(
     "CREDS_PATH",
     str(BASE_DIR / "credentials.json")
 )
+
+render_creds = "/etc/secrets/credentials.json"
+if os.path.exists(render_creds):
+    creds_path = render_creds
+else:
+    creds_path = os.environ.get("CREDS_PATH", local_creds)
+    
 SCOPE = ["https://spreadsheets.google.com/feeds",
                     "https://www.googleapis.com/auth/drive"]
 
@@ -45,6 +52,7 @@ class GoogleSheetService:
         self,
         key:str,
     ):
+        
         try:
             with open(creds_path, "r") as f:
                 creds_dict = json.load(f)
