@@ -1,3 +1,13 @@
+const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, "");
+
+if (!API_URL) {
+  throw new Error("VITE_API_URL не налаштовано");
+}
+
+/* ==================================================
+   TYPES
+================================================== */
+
 export type IncubatorState = "available" | "incubating" | "broken";
 
 export type IncubatorType = "automatic" | "manual";
@@ -78,12 +88,17 @@ function telegramHeaders(): HeadersInit {
 ================================================== */
 
 export async function getIncubators(): Promise<Incubator[]> {
-  const response = await fetch("/api/v1/incubators/", {
+  const response = await fetch(`${API_URL}/api/v1/incubators/`, {
+    method: "GET",
     headers: telegramHeaders(),
   });
 
   if (!response.ok) {
-    throw new Error(`Не вдалося отримати інкубатори (${response.status})`);
+    const error = await response.text();
+
+    throw new Error(
+      `Не вдалося отримати інкубатори (${response.status}): ${error}`,
+    );
   }
 
   return response.json();
@@ -94,7 +109,8 @@ export async function getIncubators(): Promise<Incubator[]> {
 ================================================== */
 
 export async function getIncubator(id: number): Promise<Incubator> {
-  const response = await fetch(`/api/v1/incubators/${id}`, {
+  const response = await fetch(`${API_URL}/api/v1/incubators/${id}`, {
+    method: "GET",
     headers: telegramHeaders(),
   });
 
@@ -103,7 +119,9 @@ export async function getIncubator(id: number): Promise<Incubator> {
   }
 
   if (!response.ok) {
-    throw new Error(`Помилка API: ${response.status}`);
+    const error = await response.text();
+
+    throw new Error(`Помилка API (${response.status}): ${error}`);
   }
 
   return response.json();
@@ -116,16 +134,24 @@ export async function getIncubator(id: number): Promise<Incubator> {
 export async function getIncubatorParameters(
   id: number,
 ): Promise<IncubationParameters> {
-  const response = await fetch(`/api/v1/incubators/${id}/parameters`, {
-    headers: telegramHeaders(),
-  });
+  const response = await fetch(
+    `${API_URL}/api/v1/incubators/${id}/parameters`,
+    {
+      method: "GET",
+      headers: telegramHeaders(),
+    },
+  );
 
   if (response.status === 404) {
     throw new Error("Інкубатор не знайдено");
   }
 
   if (!response.ok) {
-    throw new Error(`Помилка отримання параметрів (${response.status})`);
+    const error = await response.text();
+
+    throw new Error(
+      `Помилка отримання параметрів (${response.status}): ${error}`,
+    );
   }
 
   const data: IncubationParametersResponse = await response.json();
