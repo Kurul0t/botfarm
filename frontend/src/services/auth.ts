@@ -6,8 +6,10 @@ export interface AuthResponse {
   bot_id: number;
 }
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export async function authTelegram(initData: string): Promise<AuthResponse> {
-  const response = await fetch("/api/v1/auth/telegram", {
+  const response = await fetch(`${API_URL}/api/v1/auth/telegram`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
