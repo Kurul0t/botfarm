@@ -56,7 +56,7 @@ TABLES = {
     ],
     "incubators": [
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("device_code", sa.String(20), nullable=False),
+        sa.Column("device_code", sa.String(20), nullable=True),
         sa.Column("company_id", sa.Integer(), nullable=False),
         sa.Column("number", sa.Integer(), nullable=False),
         sa.Column("device_type", sa.String(20), nullable=False, server_default="manual"),
