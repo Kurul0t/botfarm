@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from core import app_state
-import ast
+import json
 from services.reminder.reminder_service import pererobka
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -61,7 +61,7 @@ def create_incubation_router() -> Router:
                 company_id=company_id,
                 number=int(number)
             )
-
+            await message.answer(instruction)
             await state.clear()
         else:
             await message.answer("❌ Номер інкубатора не коректний")         
@@ -145,33 +145,47 @@ def create_incubation_router() -> Router:
         user_id = callback.from_user.id
         bot_id = bot.id
         
-        script = await app_state.instruction_service.get_script(id=instruction_id)
-        rem_list = []
-        
+        script = await app_state.instruction_service.get_script(
+            id=instruction_id
+        )
+
         if not script:
-            print("База даних повернула порожній список.")
+            await callback.message.answer(
+                "❌ Інструкцію не знайдено."
+            )
             return
-            
-        script = script.strip('"')
+
         try:
-            dictionary_format = "{" + script + "}"
-            instruction_dict = ast.literal_eval(dictionary_format)
-        except Exception as e:
-            print(f"Помилка конвертації рядка у словник: {e}")
-            await callback.message.answer("❌ Помилка обробки інструкції.")
+            instruction = json.loads(script)
+
+        except (json.JSONDecodeError, TypeError, AttributeError) as e:
+            logger.error(f"Помилка обробки інструкції: {e}")
+            await callback.message.answer(
+                "❌ Помилка обробки інструкції."
+            )
             return
-            
-        for key, value in instruction_dict.items():
-            rem_list.append((key, user_id, bot_id, value, number_of_incubator))
-        
-        # 1. Записуємо нагадування в БД та запускаємо менеджер
-        reminder_list = await pererobka(rem_list)
+
+        reminder_list = await pererobka(
+            instruction=instruction,
+            user_id=user_id,
+            bot_id=bot_id,
+            number=number_of_incubator,
+        )
         for reminder in reminder_list:
             await app_state.reminder_manager.add_reminder(reminder)
         await app_state.reminder_manager.restart()
         
         # 2. Оновлюємо стан інкубатора в БД
-        await app_state.incubator_service.update_state(bot_id=bot_id, number=number_of_incubator,val = "INCUBATING")
+        await app_state.incubator_service.update_incubators_info(
+            bot_id=bot_id,
+            number=number_of_incubator,
+            incubators_info={
+                "state": "incubating",
+                "eggs_amount": int(eggs_amount),
+                "instruction_id": int(instruction_id),
+                "activated_at": datetime.now(tz=UA_TZ),
+            },
+        )
         
         # 3. МИТТЄВО НАДСИЛАЄМО ВІДПОВІДЬ КОРИСТУВАЧУ (щоб бот не зависать)
         plus_17 = (datetime.now() + timedelta(days=17)).strftime("%d.%m.%Y")
@@ -200,8 +214,8 @@ def create_incubation_router() -> Router:
                     number_of_incubator, 
                     "Етап 1", 
                     today_str, 
-                    "", 
-                    "", 
+                    "-->", 
+                    plus_17, 
                     eggs_amount
                 ])
                 break # Зупиняємо цикл, бо лист уже знайдено

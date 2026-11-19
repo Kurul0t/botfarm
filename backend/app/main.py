@@ -1,17 +1,31 @@
 import asyncio
 from dotenv import load_dotenv
 
+import uvicorn
+from fastapi import FastAPI
+
 from telegram.manager.bot_manager import BotManager
 from telegram.manager.reminder_manager import ReminderManager
 from telegram.manager.bot_loader import BotLoader
 import core.app_state as app_state
 
 
-
+from api.v1.api import api_router
 
 load_dotenv()
 
+app = FastAPI(title="Botfarm API", version="1.0.0")
+app.include_router(api_router, prefix="/api/v1")
 
+@app.get("/")
+async def root():
+    return {"status": "Botfarm backend is running"}
+
+
+async def run_fastapi():
+    config = uvicorn.Config(app=app, host="127.0.0.1", port=8000, log_level="info")
+    server = uvicorn.Server(config)
+    await server.serve()
 
 async def main():
     
@@ -27,7 +41,10 @@ async def main():
 
     await app_state.bot_manager.start()
     await bot_loader.load_saved_bots()
-    await asyncio.Event().wait()
+    await asyncio.gather(
+        app_state.reminder_manager.start(),
+        run_fastapi()
+    )
 
 
 if __name__ == "__main__":

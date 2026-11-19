@@ -1,30 +1,22 @@
+
 import asyncio
 import os
+import logging
 
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
+
 from telegram.main_bot.router import main_router
 from telegram.client_bot.router import create_client_router
-
+from services.client.mini_app import setup_mini_app
 
 import core.app_state as app_state
+
+
 load_dotenv()
 
+logger = logging.getLogger(__name__)
 
-async def loading():
-
-    frames = ["|", "/", "-", "\\"]
-
-    i = 0
-
-    while True:
-
-        print(f"\r {frames[i % 4]}    ", end="", flush=True)
-
-        i += 1
-
-        await asyncio.sleep(0.1)
-    
 
 class BotManager:
 
@@ -36,46 +28,63 @@ class BotManager:
 
         self.main_bot = Bot(token=self.main_token)
         self.main_dp = Dispatcher()
+
         self.bots: dict[int, Bot] = {}
+        self.tasks: dict[int, asyncio.Task] = {}
 
     def get_bot(self, bot_id: int) -> Bot | None:
-            print("works")
-            return self.bots.get(bot_id)
-    
+        return self.bots.get(bot_id)
+
     async def start(self):
         self.main_dp.include_router(main_router)
+
         await app_state.reminder_manager.start()
-        
-        loading_task = asyncio.create_task(loading())
-        print("Запуск головного бота")
-        
-        loading_task.cancel()
-        print("\rГоловний бот запущен!")
-        asyncio.create_task(
-            self.main_dp.start_polling(
-                self.main_bot
-            )
+
+        self.tasks[0] = asyncio.create_task(
+            self.main_dp.start_polling(self.main_bot)
         )
-        print("Головний бот запущен!")
-        
+
+        logger.info("Головний бот запущений")
+
     async def create_bot(self, token: str):
-        bot = Bot(token)
-        # Отримуємо Telegram ID бота
-        bot_info = await bot.get_me()
-        bot_id = bot_info.id
+        bot = Bot(token=token)
 
-        # Зберігаємо бота
-        self.bots[bot_id] = bot
+        try:
+            bot_info = await bot.get_me()
+            bot_id = bot_info.id
 
-        dp = Dispatcher()
+            if bot_id in self.bots:
+                logger.info(
+                    "Бот %s вже запущений",
+                    bot_id,
+                )
+                await bot.session.close()
+                return
 
-        router = create_client_router()
-        dp.include_router(router)
+            # Автоматично налаштовуємо Mini App
+            await setup_mini_app(bot)
 
-        asyncio.create_task(
-            dp.start_polling(bot)
-        )
+            # Створюємо Dispatcher
+            dp = Dispatcher()
 
-        print(f"Бот {token} запущений")
-        
-    
+            router = create_client_router()
+            dp.include_router(router)
+
+            # Запускаємо polling
+            task = asyncio.create_task(
+                dp.start_polling(bot)
+            )
+
+            # Зберігаємо бота
+            self.bots[bot_id] = bot
+            self.tasks[bot_id] = task
+
+            logger.info(
+                "Бот @%s (%s) запущений. Mini App налаштовано.",
+                bot_info.username,
+                bot_id,
+            )
+
+        except Exception:
+            await bot.session.close()
+            raise

@@ -1,0 +1,40 @@
+{
+    "temperature": {
+        "name": "Температура",
+        "type": "number",
+        "value": null,
+        "unit": "°C",
+        "description": "Рекомендована температура інкубації"
+    },
+    "humidity": {
+        "name": "Вологість",
+        "type": "range",
+        "value": {
+            "min": null,
+            "max": null
+        },
+        "unit": "%",
+        "description": "Рекомендований діапазон вологості"
+    },
+    "turning_interval": {
+        "name": "Інтервал перевертання",
+        "type": "number",
+        "value": null,
+        "unit": "год",
+        "description": "Час між перевертаннями яєць"
+    },
+    "ventilation_count": {
+        "name": "Частота провітрювання",
+        "type": "number",
+        "value": null,
+        "unit": "разів/добу",
+        "description": "Кількість провітрювань за добу"
+    },
+    "ventilation_duration": {
+        "name": "Тривалість провітрювання",
+        "type": "number",
+        "value": null,
+        "unit": "хв",
+        "description": "Тривалість одного провітрювання"
+    }
+}
