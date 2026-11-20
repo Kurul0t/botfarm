@@ -95,9 +95,8 @@ async def pererobka(instruction, user_id, bot_id, number):
                     "bot_id": bot_id,
                     "number": number,
                     "incubators_info":{
-                                    "state": "incubating",
+                                    "state": "available",
                                     "eggs_amount": int(0),
-                                    "instruction_id": None,
                                     
                                 },
                 },
